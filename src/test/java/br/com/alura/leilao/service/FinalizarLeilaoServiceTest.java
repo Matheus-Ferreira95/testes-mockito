@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.BDDMockito;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -25,7 +26,10 @@ class FinalizarLeilaoServiceTest {
 	private FinalizarLeilaoService service;
 	
 	@Mock
-	private LeilaoDao leilaoDaoMock;			
+	private LeilaoDao leilaoDaoMock;		
+	
+	@Mock
+	private EnviadorDeEmails enviadorDeEmailsMock;
 	
 	@Test
 	void deveriaFinalizarUmLeilao() {	
@@ -37,8 +41,35 @@ class FinalizarLeilaoServiceTest {
 		service.finalizarLeiloesExpirados();
 		
 		assertThat(leilao.isFechado());
-		assertThat(leilao.getLanceVencedor().getValor()).isEqualTo(new BigDecimal("900"));
+		assertThat(leilao.getLanceVencedor().getValor()).isEqualTo(new BigDecimal("600"));
 		BDDMockito.verify(leilaoDaoMock).salvar(leilao);
+	}
+	
+	@Test
+	void deveriaEnviarEmailParaOVencedor() {	
+		List<Leilao> leiloes = leiloes();		
+		BDDMockito.when(leilaoDaoMock.buscarLeiloesExpirados()).thenReturn(leiloes);
+				
+		service.finalizarLeiloesExpirados();
+		
+		Leilao leilao = leiloes.get(0);
+		Lance lanceVencedor = leilao.getLanceVencedor();
+		
+		BDDMockito.verify(enviadorDeEmailsMock).enviarEmailVencedorLeilao(lanceVencedor);
+	}
+	
+	@Test
+	void naoDeveriaEnviarEmailParaOVencedorDoLeilaoEmCasoDeErroAoEncerrarOLeilao() {	
+		List<Leilao> leiloes = leiloes();		
+		
+		BDDMockito.when(leilaoDaoMock.buscarLeiloesExpirados()).thenReturn(leiloes);
+		
+		BDDMockito.when(leilaoDaoMock.salvar(ArgumentMatchers.any())).thenThrow(RuntimeException.class);
+		
+		try {
+			service.finalizarLeiloesExpirados();			
+			BDDMockito.verifyNoInteractions(enviadorDeEmailsMock);
+		} catch (Exception e) { }		
 	}
 	
 	private List<Leilao> leiloes() {
