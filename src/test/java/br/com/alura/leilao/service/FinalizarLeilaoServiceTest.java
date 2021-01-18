@@ -41,7 +41,7 @@ class FinalizarLeilaoServiceTest {
 		service.finalizarLeiloesExpirados();
 		
 		assertThat(leilao.isFechado());
-		assertThat(leilao.getLanceVencedor().getValor()).isEqualTo(new BigDecimal("600"));
+		assertThat(leilao.getLanceVencedor().getValor()).isEqualTo(new BigDecimal("900"));
 		BDDMockito.verify(leilaoDaoMock).salvar(leilao);
 	}
 	
